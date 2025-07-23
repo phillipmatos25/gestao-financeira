@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestão Financeira Familiar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Gestão Financeira</h1>
+
+    <!-- Caixas de Totais -->
+    <div class="caixas-totais">
+        <div class="caixa receita">
+            <h3>Total de Receitas</h3>
+            <p>{{ total_receitas | format_currency }}</p>
+        </div>
+        <div class="caixa despesa">
+            <h3>Total de Despesas</h3>
+            <p>{{ total_despesas | format_currency }}</p>
+        </div>
+    </div>
+
+    <form method="get" class="filtro-mes">
+        <label for="mes">Mês:</label>
+        <input type="month" name="mes" id="mes" value="{{ filtro_mes }}">
+        <button type="submit">Filtrar</button>
+    </form>
+
+    <form method="post" class="formulario">
+        <input type="date" name="data" required>
+        <input type="text" name="descricao" placeholder="Descrição" required>
+        <select name="categoria" required>
+            <option value="" disabled selected>Categoria</option>
+            {% for c in categorias %}
+                <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+        </select>
+        <select name="cartao" required>
+            <option value="" disabled selected>Cartão</option>
+            {% for c in cartoes %}
+                <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" name="valor" step="0.01" placeholder="Valor" required>
+        <select name="tipo" required>
+            <option value="despesa">Despesa</option>
+            <option value="receita">Receita</option>
+        </select>
+        <button type="submit">Adicionar</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Cartão</th>
+                <th>Valor</th>
+                <th>Tipo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in movimentacoes %}
+                <tr>
+                    <td>{{ m.data }}</td>
+                    <td>{{ m.descricao }}</td>
+                    <td>{{ m.categoria }}</td>
+                    <td>{{ m.cartao }}</td>
+                    <td class="{{ 'positivo' if m.tipo == 'receita' else 'negativo' }}">
+                        {{ m.valor | format_currency }}
+                    </td>
+                    <td>{{ m.tipo.capitalize() }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4"><strong>Total:</strong></td>
+                <td colspan="2">
+                    <strong class="{{ 'positivo' if total >= 0 else 'negativo' }}">
+                        R$ {{ '%.2f'|format(total) }}
+                    </strong>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+</body>
+</html>
