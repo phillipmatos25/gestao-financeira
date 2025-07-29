@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastros Gerais</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_cadastros.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Gestão de Cadastros</h1>
+
+        <!-- Formulário de Cadastro de Categoria -->
+        <section class="form-section">
+            <h2>Cadastro de Categorias</h2>
+            <form method="post" class="form">
+                <input type="text" name="categoria" placeholder="Nome da Categoria" required>
+                <input type="text" name="descricao_categoria" placeholder="Descrição da Categoria" required>
+                <button type="submit" name="add_categoria">Adicionar Categoria</button>
+            </form>
+            <h3>Categorias Cadastradas</h3>
+            <ul>
+                {% for categoria in categorias %}
+                    <li>
+                        {{ categoria['nome'] }} - {{ categoria['descricao'] }}
+                        <form method="post" style="display:inline;">
+                            <input type="hidden" name="categoria_id" value="{{ categoria['id'] }}">
+                            <button type="submit" name="excluir_categoria" class="btn-excluir">Excluir</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        </section>
+
+        <!-- Formulário de Cadastro de Cartão -->
+        <section class="form-section">
+            <h2>Cadastro de Cartões</h2>
+            <form method="post" class="form">
+                <input type="text" name="cartao" placeholder="Nome do Cartão" required>
+                <input type="text" name="bandeira_cartao" placeholder="Bandeira do Cartão" required>
+                <button type="submit" name="add_cartao">Adicionar Cartão</button>
+            </form>
+            <h3>Cartões Cadastrados</h3>
+            <ul>
+                {% for cartao in cartoes %}
+                    <li>
+                        {{ cartao['nome'] }} - {{ cartao['bandeira'] }}
+                        <form method="post" style="display:inline;">
+                            <input type="hidden" name="cartao_id" value="{{ cartao['id'] }}">
+                            <button type="submit" name="excluir_cartao" class="btn-excluir">Excluir</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        </section>
+
+        <!-- Botão para voltar à tela inicial -->
+        <div class="center">
+            <a href="{{ url_for('index') }}">
+                <button type="button" class="btn-voltar">Voltar para a Página Inicial</button>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

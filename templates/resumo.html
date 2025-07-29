@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <title>Resumo Financeiro</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <style>
+        /* Container centralizado com largura melhor para gráficos */
+        .container {
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+        .btn-incluir {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 400;
+            transition: background-color 0.3s ease;
+        }
+        .btn-incluir:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Resumo Financeiro</h1>
+
+        <!-- Gráfico de Pizza: Por Categoria -->
+        <h2>Distribuição por Categoria</h2>
+        <canvas id="graficoCategoria" height="350"></canvas>
+
+        <!-- Gráfico de Barras: Por Cartão -->
+        <h2 style="margin-top: 50px;">Totais por Cartão</h2>
+        <canvas id="graficoCartao" height="350"></canvas>
+
+        <!-- Voltar -->
+        <div style="text-align: center; margin-top: 50px;">
+            <a href="{{ url_for('index') }}" class="btn-incluir">Voltar</a>
+        </div>
+    </div>
+
+    <script>
+        // Dados do gráfico de pizza por categoria
+        const categoriaLabels = {{ labels_categorias | tojson }};
+        const categoriaTotais = {{ valores_categorias | tojson }};
+
+        const ctx1 = document.getElementById('graficoCategoria').getContext('2d');
+        new Chart(ctx1, {
+            type: 'pie',
+            data: {
+                labels: categoriaLabels,
+                datasets: [{
+                    label: 'Total por Categoria',
+                    data: categoriaTotais,
+                    backgroundColor: [
+                        '#3498db', '#e74c3c', '#2ecc71', '#f39c12',
+                        '#9b59b6', '#1abc9c', '#34495e', '#95a5a6'
+                    ],
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                }
+            }
+        });
+
+        // Dados do gráfico de barras por cartão (receita e despesa)
+        const cartaoLabels = {{ labels_cartoes | tojson }};
+        const cartaoReceitas = {{ cartao_receitas | tojson }};
+        const cartaoDespesas = {{ valores_cartoes | tojson }};
+
+        const ctx2 = document.getElementById('graficoCartao').getContext('2d');
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: cartaoLabels,
+                datasets: [
+                    {
+                        label: 'Receita',
+                        data: cartaoReceitas,
+                        backgroundColor: '#2ecc71'
+                    },
+                    {
+                        label: 'Despesa',
+                        data: cartaoDespesas,
+                        backgroundColor: '#e74c3c'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            // Formata ticks como moeda BR
+                            callback: function(value) {
+                                return 'R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': R$ ' + context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -4,10 +4,20 @@
     <meta charset="UTF-8">
     <title>Gestão Financeira Familiar</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon.png') }}">   
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon.png') }}">
 </head>
 <body>
     <h1>Gestão Financeira</h1>
+
+    <!-- Botões de navegação -->
+    <div class="top-buttons">
+        <a href="{{ url_for('cadastros') }}">
+            <button class="btn-cadastros">Cadastros Gerais</button>
+        </a>
+        <a href="{{ url_for('resumo') }}">
+            <button class="btn-resumo">Resumo</button>
+        </a>
+    </div>
 
     <!-- Caixas de Totais -->
     <div class="caixas-totais">
@@ -21,35 +31,58 @@
         </div>
     </div>
 
-    <form method="get" class="filtro-mes">
-        <label for="mes">Mês:</label>
-        <input type="month" name="mes" id="mes" value="{{ filtro_mes }}">
-        <button type="submit">Filtrar</button>
+    <!-- FILTROS DE MÊS E PAGAMENTO -->
+    <form method="get" class="filtros-container">
+        <div>
+            <label for="mes">Mês de Referência:</label>
+            <input type="month" name="mes" id="mes" value="{{ filtro_mes }}">
+        </div>
+        <div>
+            <label for="pago">Status Parcela:</label>
+            <select name="pago" id="pago">
+                <option value="" {% if not filtro_pago %}selected{% endif %}>Todos</option>
+                <option value="sim" {% if filtro_pago == 'sim' %}selected{% endif %}>Pagos</option>
+                <option value="nao" {% if filtro_pago == 'nao' %}selected{% endif %}>Pendentes</option>
+            </select>
+        </div>
+        <div>
+            <button type="submit">Filtrar</button>
+        </div>
     </form>
 
+    <!-- FORMULÁRIO DE INCLUSÃO -->
     <form method="post" class="formulario">
         <input type="date" name="data" required>
         <input type="text" name="descricao" placeholder="Descrição" required>
+
         <select name="categoria" required>
             <option value="" disabled selected>Categoria</option>
             {% for c in categorias %}
-                <option value="{{ c }}">{{ c }}</option>
+                <option value="{{ c['nome'] }}">{{ c['nome'] }}</option>
             {% endfor %}
         </select>
+
         <select name="cartao" required>
             <option value="" disabled selected>Cartão</option>
-            {% for c in cartoes %}
-                <option value="{{ c }}">{{ c }}</option>
+            {% for cartao in cartoes %}
+                <option value="{{ cartao['id'] }}">
+                    {{ cartao['bandeira'] }} ({{ cartao['nome'] }})
+                </option>
             {% endfor %}
         </select>
-        <input type="number" name="valor" step="0.01" placeholder="Valor" required>
+
+        <input type="number" name="parcelas" min="1" placeholder="Parcelas" value="1" required>
+        <input type="number" name="valor" step="0.01" placeholder="Valor (R$)" required>
+
         <select name="tipo" required>
             <option value="despesa">Despesa</option>
             <option value="receita">Receita</option>
         </select>
-        <button type="submit">Adicionar</button>
+
+        <button type="submit" class="btn-incluir">Adicionar</button>
     </form>
 
+    <!-- TABELA DE MOVIMENTAÇÕES -->
     <table>
         <thead>
             <tr>
@@ -57,8 +90,11 @@
                 <th>Descrição</th>
                 <th>Categoria</th>
                 <th>Cartão</th>
+                <th>Parcela</th>
                 <th>Valor</th>
                 <th>Tipo</th>
+                <th>Status</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>
@@ -67,18 +103,41 @@
                     <td>{{ m.data }}</td>
                     <td>{{ m.descricao }}</td>
                     <td>{{ m.categoria }}</td>
-                    <td>{{ m.cartao }}</td>
+                    <td>
+                        {% if m.cartao %}
+                            {{ m.cartao['bandeira'] }} / {{ m.cartao['nome'] }}
+                        {% else %}
+                            <em>Não vinculado</em>
+                        {% endif %}
+                    </td>
+                    <td>{{ m.parcela_numero }} / {{ m.parcelas }}</td>
                     <td class="{{ 'positivo' if m.tipo == 'receita' else 'negativo' }}">
                         {{ m.valor | format_currency }}
                     </td>
                     <td>{{ m.tipo.capitalize() }}</td>
+                    <td>
+                        <form method="post" action="{{ url_for('index') }}" style="display:inline;">
+                            <input type="hidden" name="movimentacao_id" value="{{ m.id }}">
+                            <input type="hidden" name="paga" value="{{ 0 if m.paga else 1 }}">
+                            <input type="hidden" name="alterar_status_parcela" value="1">
+                            <button type="submit" class="btn-status {{ 'paga' if m.paga else 'pendente' }}">
+                                {{ 'Pago' if m.paga else 'Pendente' }}
+                            </button>
+                        </form>
+                    </td>
+                    <td>
+                        <form method="post" style="display:inline;">
+                            <input type="hidden" name="movimentacao_id" value="{{ m.id }}">
+                            <button type="submit" name="excluir_movimentacao" class="btn-excluir">Excluir</button>
+                        </form>
+                    </td>
                 </tr>
             {% endfor %}
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="4"><strong>Total:</strong></td>
-                <td colspan="2">
+                <td colspan="6"><strong>Total:</strong></td>
+                <td colspan="3">
                     <strong class="{{ 'positivo' if total >= 0 else 'negativo' }}">
                         R$ {{ '%.2f'|format(total) }}
                     </strong>

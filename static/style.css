@@ -1,3 +1,45 @@
+/* Botão "Cadastros Gerais" */
+.btn-cadastros {
+    position: fixed; /* Fixa o botão na tela */
+    top: 10px;       /* Distância do topo */
+    left: 10px;      /* Distância da esquerda */
+    padding: 10px 16px;
+    background-color: #3498db; /* Cor de fundo do botão */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+}
+.btn-resumo {
+    position: fixed; /* Fixa o botão na tela */
+    top: 50px;       /* Distância do topo */
+    left: 10px;      /* Distância da esquerda */
+    padding: 10px 16px;
+    background-color: #3498db; /* Cor de fundo do botão */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+}
+
+.paga {
+        background-color: #4CAF50;
+        color: white;
+}
+.pendente {
+        background-color: #ff8b3e;
+        color: white;
+}
+.btn-cadastros:hover {
+    background-color: #2980b9; /* Cor do botão quando passar o mouse */
+}
+
 /* === Caixas de Totais de Receita e Despesa === */
 .caixas-totais {
     display: flex;
@@ -32,6 +74,86 @@
     background-color: #fbeaea;
 }
 
+/* Container geral dos filtros de mês e status */
+.filtros-container {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: flex-end;
+    margin: 20px auto 10px auto;
+    max-width: 1000px;
+    flex-wrap: wrap;
+}
+
+/* Cada grupo (label + input/select) */
+.filtros-container > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* Label dos filtros */
+.filtros-container label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #333;
+    font-size: 1em;
+}
+
+/* Inputs e selects dentro do filtro */
+.filtros-container input[type="month"],
+.filtros-container select {
+    padding: 8px 12px;
+    font-size: 1em;
+    border: 1px solid #ccd1d9;
+    border-radius: 6px;
+    background-color: #fff;
+    transition: border-color 0.2s ease;
+    min-width: 160px;
+    box-sizing: border-box;
+}
+
+.filtros-container input[type="month"]:focus,
+.filtros-container select:focus {
+    border-color: #4CAF50;
+    outline: none;
+}
+
+/* Botão do filtro */
+.filtros-container button {
+    padding: 10px 16px;
+    background-color: #4CAF50;
+    color: white;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    min-width: 100px;
+    box-sizing: border-box;
+    margin-top: 26px;
+}
+
+.filtros-container button:hover {
+    background-color: #3e8e41;
+}
+
+.btn-status {
+    padding: 4px 8px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+}
+.filtros-container {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+}
+.filtros-container label {
+        font-weight: bold;
+}
 .caixa h3 {
     margin-bottom: 10px;
     font-size: 1.1em;
@@ -57,6 +179,24 @@
         width: 90%;
     }
 }
+
+/* Botão Excluir - Específico */
+.btn-excluir {
+    background-color: #e74c3c; /* Cor de fundo vermelha */
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+}
+
+/* Cor do botão quando passar o mouse */
+.btn-excluir:hover {
+    background-color: #c0392b; /* Cor do botão quando passar o mouse (tom mais escuro de vermelho) */
+}    
 
 * {
     box-sizing: border-box;
@@ -101,8 +241,8 @@ input:focus, select:focus {
     outline: none;
 }
 
-button {
-    background-color: #4CAF50;
+.btn-incluir {
+    background-color: #007bff;
     color: white;
     border: none;
     padding: 10px 16px;
@@ -173,4 +313,15 @@ tfoot td {
     table {
         font-size: 0.9em;
     }
+}
+
+input[name="valor"],
+input[name="parcelas"] {
+    width: 7%;          /* metade da largura */
+    font-size: 0.9em;    /* fonte menor */
+    padding-top: 10px;    /* mantém padding vertical */
+    padding-bottom: 10px; /* mantém padding vertical */
+    padding-left: 5px;    /* reduz padding horizontal */
+    padding-right: 5px;   /* reduz padding horizontal */
+    box-sizing: border-box;
 }
