@@ -1,24 +1,10 @@
 /* Botão "Cadastros Gerais" */
 .btn-cadastros {
-    position: fixed; /* Fixa o botão na tela */
-    top: 10px;       /* Distância do topo */
-    left: 10px;      /* Distância da esquerda */
+    position: fixed;
+    top: 10px;
+    left: 10px;
     padding: 10px 16px;
-    background-color: #3498db; /* Cor de fundo do botão */
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1em;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.3s ease;
-}
-.btn-resumo {
-    position: fixed; /* Fixa o botão na tela */
-    top: 50px;       /* Distância do topo */
-    left: 10px;      /* Distância da esquerda */
-    padding: 10px 16px;
-    background-color: #3498db; /* Cor de fundo do botão */
+    background-color: #3498db;
     color: white;
     border: none;
     border-radius: 6px;
@@ -28,16 +14,33 @@
     transition: background-color 0.3s ease;
 }
 
-.paga {
-        background-color: #4CAF50;
-        color: white;
+.btn-resumo {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 10px 16px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
 }
-.pendente {
-        background-color: #ff8b3e;
-        color: white;
-}
+
 .btn-cadastros:hover {
-    background-color: #2980b9; /* Cor do botão quando passar o mouse */
+    background-color: #2980b9;
+}
+
+.paga {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.pendente {
+    background-color: #ff8b3e;
+    color: white;
 }
 
 /* === Caixas de Totais de Receita e Despesa === */
@@ -74,86 +77,6 @@
     background-color: #fbeaea;
 }
 
-/* Container geral dos filtros de mês e status */
-.filtros-container {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    align-items: flex-end;
-    margin: 20px auto 10px auto;
-    max-width: 1000px;
-    flex-wrap: wrap;
-}
-
-/* Cada grupo (label + input/select) */
-.filtros-container > div {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-}
-
-/* Label dos filtros */
-.filtros-container label {
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: #333;
-    font-size: 1em;
-}
-
-/* Inputs e selects dentro do filtro */
-.filtros-container input[type="month"],
-.filtros-container select {
-    padding: 8px 12px;
-    font-size: 1em;
-    border: 1px solid #ccd1d9;
-    border-radius: 6px;
-    background-color: #fff;
-    transition: border-color 0.2s ease;
-    min-width: 160px;
-    box-sizing: border-box;
-}
-
-.filtros-container input[type="month"]:focus,
-.filtros-container select:focus {
-    border-color: #4CAF50;
-    outline: none;
-}
-
-/* Botão do filtro */
-.filtros-container button {
-    padding: 10px 16px;
-    background-color: #4CAF50;
-    color: white;
-    font-weight: 600;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    min-width: 100px;
-    box-sizing: border-box;
-    margin-top: 26px;
-}
-
-.filtros-container button:hover {
-    background-color: #3e8e41;
-}
-
-.btn-status {
-    padding: 4px 8px;
-    cursor: pointer;
-    border: none;
-    border-radius: 4px;
-    font-weight: bold;
-}
-.filtros-container {
-        margin-bottom: 20px;
-        display: flex;
-        gap: 10px;
-        align-items: center;
-}
-.filtros-container label {
-        font-weight: bold;
-}
 .caixa h3 {
     margin-bottom: 10px;
     font-size: 1.1em;
@@ -180,63 +103,101 @@
     }
 }
 
-/* Botão Excluir - Específico */
-.btn-excluir {
-    background-color: #e74c3c; /* Cor de fundo vermelha */
-    color: white;
-    border: none;
+/* === Filtros de Mês e Pagamento === */
+.filtros-container {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: flex-end;
+    margin: 20px auto;
+    max-width: 1000px;
+    flex-wrap: wrap;
+}
+
+.filtros-container > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.filtros-container label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #333;
+    font-size: 1em;
+}
+
+.filtros-container input[type="month"],
+.filtros-container select {
+    padding: 8px 12px;
+    font-size: 1em;
+    border: 1px solid #ccd1d9;
+    border-radius: 6px;
+    background-color: #fff;
+    transition: border-color 0.2s ease;
+    min-width: 160px;
+    box-sizing: border-box;
+}
+
+.filtros-container input[type="month"]:focus,
+.filtros-container select:focus {
+    border-color: #4CAF50;
+    outline: none;
+}
+
+.filtros-container button {
     padding: 10px 16px;
+    background-color: #4CAF50;
+    color: white;
+    font-weight: 600;
+    border: none;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 1em;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     transition: background-color 0.3s ease;
-}
-
-/* Cor do botão quando passar o mouse */
-.btn-excluir:hover {
-    background-color: #c0392b; /* Cor do botão quando passar o mouse (tom mais escuro de vermelho) */
-}    
-
-* {
+    min-width: 100px;
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+    margin-top: 26px;
 }
 
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f2f4f8;
-    padding: 30px;
-    color: #333;
+.filtros-container button:hover {
+    background-color: #3e8e41;
 }
 
-/* Cabeçalho */
-h1 {
-    text-align: center;
-    margin-bottom: 30px;
-    color: #2c3e50;
-}
-
-/* Formulários */
-form {
+/* === Formulário Principal === */
+.formulario {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 16px;
     justify-content: center;
-    margin: 20px 0;
+    max-width: 1000px;
+    margin: 20px auto;
 }
 
-input, select {
+.formulario div {
+    display: flex;
+    flex-direction: column;
+    width: 200px;
+}
+
+.formulario label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #333;
+    font-size: 0.95em;
+}
+
+.formulario input,
+.formulario select {
     padding: 10px;
     font-size: 1em;
     border: 1px solid #ccd1d9;
     border-radius: 6px;
     background-color: #fff;
-    transition: border 0.2s ease;
+    transition: border-color 0.2s ease;
 }
 
-input:focus, select:focus {
+.formulario input:focus,
+.formulario select:focus {
     border-color: #4CAF50;
     outline: none;
 }
@@ -251,8 +212,8 @@ input:focus, select:focus {
     transition: background-color 0.2s ease;
 }
 
-button:hover {
-    background-color: #3e8e41;
+.btn-incluir:hover {
+    background-color: #0056b3;
 }
 
 /* Tabela */
@@ -298,16 +259,59 @@ tfoot td {
     font-weight: bold;
 }
 
-/* Responsivo */
+/* Botão status */
+.btn-status {
+    padding: 4px 8px;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+/* Botão Excluir */
+.btn-excluir {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+}
+
+.btn-excluir:hover {
+    background-color: #c0392b;
+}
+
+/* Campos específicos */
+input[name="valor"] {
+    width: 100%;
+    font-size: 0.9em;
+    box-sizing: border-box;
+}
+
+input[name="parcelas"] {
+    width: 75%;
+    font-size: 0.9em;
+    box-sizing: border-box;
+}
+
+/* Responsivo geral */
 @media (max-width: 768px) {
-    form {
+    .formulario {
         flex-direction: column;
         align-items: center;
     }
 
-    input, select, button {
+    .formulario div {
         width: 90%;
         max-width: 400px;
+    }
+
+    input, select, button {
+        width: 100%;
     }
 
     table {
@@ -315,13 +319,22 @@ tfoot td {
     }
 }
 
-input[name="valor"],
-input[name="parcelas"] {
-    width: 7%;          /* metade da largura */
-    font-size: 0.9em;    /* fonte menor */
-    padding-top: 10px;    /* mantém padding vertical */
-    padding-bottom: 10px; /* mantém padding vertical */
-    padding-left: 5px;    /* reduz padding horizontal */
-    padding-right: 5px;   /* reduz padding horizontal */
+/* Geral */
+* {
     box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f2f4f8;
+    padding: 30px;
+    color: #333;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #2c3e50;
 }

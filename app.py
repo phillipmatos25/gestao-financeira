@@ -51,6 +51,7 @@ def format_currency(valor):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    mes_atual = datetime.now().strftime('%Y-%m')
     filtro_mes = request.args.get('mes')
     filtro_pago = request.args.get('pago')
 
@@ -72,6 +73,9 @@ def index():
             return redirect(url_for('index', mes=filtro_mes, pago=filtro_pago))
 
         data_str = request.form['data']
+        data_pagamento_str = request.form.get('data_pagamento')
+        data_pagamento = data_pagamento_str if data_pagamento_str else None
+
         descricao = request.form['descricao']
         categoria = request.form['categoria']
         cartao_id = request.form['cartao']
@@ -79,33 +83,54 @@ def index():
         valor_total = float(request.form['valor'])
         tipo = request.form['tipo']
         parcelas = int(request.form.get('parcelas', 1))
+        fixa = request.form.get('fixa') == '1'  # Checkbox marcada?
 
         data_obj = datetime.strptime(data_str, '%Y-%m-%d')
 
-        valor_parcela = round(valor_total / parcelas, 2)
-        valor_total_parcelas = valor_parcela * parcelas
-        diferenca = round(valor_total - valor_total_parcelas, 2)
+        if fixa:
+            for i in range(12):
+                data_parcela = data_obj + relativedelta(months=i)
+                cursor.execute('''
+                    INSERT INTO movimentacoes 
+                    (data, data_pagamento, descricao, categoria, cartao, valor, tipo, parcelas, parcela_numero, paga)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                ''', (
+                    data_parcela.strftime('%Y-%m-%d'),
+                    data_pagamento,
+                    descricao,
+                    categoria,
+                    cartao_id,
+                    valor_total,
+                    tipo,
+                    1,
+                    1
+                ))
+        else:
+            valor_parcela = round(valor_total / parcelas, 2)
+            valor_total_parcelas = valor_parcela * parcelas
+            diferenca = round(valor_total - valor_total_parcelas, 2)
 
-        for i in range(parcelas):
-            data_parcela = data_obj + relativedelta(months=i)
-            valor_atual = valor_parcela
-            if i == parcelas - 1:
-                valor_atual = round(valor_parcela + diferenca, 2)
+            for i in range(parcelas):
+                data_parcela = data_obj + relativedelta(months=i)
+                valor_atual = valor_parcela
+                if i == parcelas - 1:
+                    valor_atual = round(valor_parcela + diferenca, 2)
 
-            cursor.execute('''
-                INSERT INTO movimentacoes 
-                (data, descricao, categoria, cartao, valor, tipo, parcelas, parcela_numero, paga)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-            ''', (
-                data_parcela.strftime('%Y-%m-%d'),
-                descricao,
-                categoria,
-                cartao_id,
-                valor_atual,
-                tipo,
-                parcelas,
-                i + 1
-            ))
+                cursor.execute('''
+                    INSERT INTO movimentacoes 
+                    (data, data_pagamento, descricao, categoria, cartao, valor, tipo, parcelas, parcela_numero, paga)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                ''', (
+                    data_parcela.strftime('%Y-%m-%d'),
+                    data_pagamento,
+                    descricao,
+                    categoria,
+                    cartao_id,
+                    valor_atual,
+                    tipo,
+                    parcelas,
+                    i + 1
+                ))
 
         conn.commit()
         return redirect(url_for('index', mes=filtro_mes, pago=filtro_pago))
@@ -122,18 +147,18 @@ def index():
         filtros.append("paga = 0")
     if filtros:
         query += " WHERE " + " AND ".join(filtros)
+    query += " ORDER BY data"
 
     cursor.execute(query, params)
     movimentacoes = cursor.fetchall()
 
-    cursor.execute('SELECT nome FROM categorias')
+    cursor.execute('SELECT descricao FROM categorias order by descricao')
     categorias = cursor.fetchall()
 
-    cursor.execute('SELECT id, nome, bandeira FROM cartoes')
+    cursor.execute('SELECT id, nome, bandeira FROM cartoes order by nome')
     cartoes = cursor.fetchall()
     cartoes_dict = {c['id']: {'nome': c['nome'], 'bandeira': c['bandeira']} for c in cartoes}
 
-    # ✅ Correção: forçando conversão de m['cartao'] para int
     movimentacoes_formatadas = []
     for m in movimentacoes:
         try:
@@ -213,7 +238,7 @@ def resumo():
     cartoes_despesas = defaultdict(float)
     cartoes_receitas = defaultdict(float)
 
-    cursor.execute('SELECT id, nome FROM cartoes')
+    cursor.execute('SELECT id, nome FROM cartoes order by nome')
     cartoes_map = {row['id']: row['nome'] for row in cursor.fetchall()}
 
     for m in movimentacoes:
@@ -239,15 +264,13 @@ def resumo():
 
     conn.close()
 
-    return render_template(
-        'resumo.html',
-        filtro_mes=filtro_mes,
-        labels_categorias=labels_categorias,
-        valores_categorias=valores_categorias,
-        labels_cartoes=labels_cartoes,
-        valores_cartoes=valores_despesas,
-        cartao_receitas=valores_receitas
-    )
+    return render_template('resumo.html',
+                           labels_cartoes=labels_cartoes,
+                           valores_despesas=valores_despesas,
+                           valores_receitas=valores_receitas,
+                           labels_categorias=labels_categorias,
+                           valores_categorias=valores_categorias,
+                           filtro_mes=filtro_mes)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

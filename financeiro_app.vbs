@@ -1,0 +1,2 @@
+Set WshShell = CreateObject("WScript.Shell")
+WshShell.Run "cmd.exe /K C:\Users\DECOS\anaconda3\Scripts\activate.bat C:\Users\DECOS\anaconda3 && cd ""C:\Apps\gestao_financeira"" && python app.py --host 10.0.0.186 --port 5000", 0, False

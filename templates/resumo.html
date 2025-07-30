@@ -1,135 +1,139 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8" />
-    <title>Resumo Financeiro</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-    <style>
-        /* Container centralizado com largura melhor para gráficos */
-        .container {
-            max-width: 400px;
-            margin: 20px auto;
-            padding: 0 15px;
-        }
-        h1, h2 {
-            text-align: center;
-            color: #333;
-        }
-        .btn-incluir {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #3498db;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: 400;
-            transition: background-color 0.3s ease;
-        }
-        .btn-incluir:hover {
-            background-color: #2980b9;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <title>Gestão Financeira Familiar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_resumo.css') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon.png') }}">
 </head>
 <body>
-    <div class="container">
-        <h1>Resumo Financeiro</h1>
 
-        <!-- Gráfico de Pizza: Por Categoria -->
-        <h2>Distribuição por Categoria</h2>
-        <canvas id="graficoCategoria" height="350"></canvas>
+<div class="filtros">
+    <form method="get" action="{{ url_for('resumo') }}">
+        <label for="mes">Mês:</label>
+        <input type="month" id="mes" name="mes" value="{{ filtro_mes or '' }}">
+        &nbsp;&nbsp;
+        <label for="pago">Pago:</label>
+        <select id="pago" name="pago">
+            <option value="" {% if not filtro_pago %}selected{% endif %}>Todos</option>
+            <option value="sim" {% if filtro_pago == 'sim' %}selected{% endif %}>Sim</option>
+            <option value="nao" {% if filtro_pago == 'nao' %}selected{% endif %}>Não</option>
+        </select>
+        &nbsp;&nbsp;
+        <button type="submit">Filtrar</button>
+    </form>
+</div>
 
-        <!-- Gráfico de Barras: Por Cartão -->
-        <h2 style="margin-top: 50px;">Totais por Cartão</h2>
-        <canvas id="graficoCartao" height="350"></canvas>
+<!-- Botão de voltar -->
+<div style="margin: 20px;">
+    <a href="{{ url_for('index') }}">
+        <button style="padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            ← Voltar para a Tela Principal
+        </button>
+    </a>
+</div>
 
-        <!-- Voltar -->
-        <div style="text-align: center; margin-top: 50px;">
-            <a href="{{ url_for('index') }}" class="btn-incluir">Voltar</a>
-        </div>
+<div class="graficos">
+    <div>
+        <h3>Despesas por Categoria</h3>
+        <canvas id="pizzaCategorias" width="400" height="400"></canvas>
     </div>
 
-    <script>
-        // Dados do gráfico de pizza por categoria
-        const categoriaLabels = {{ labels_categorias | tojson }};
-        const categoriaTotais = {{ valores_categorias | tojson }};
+    <div>
+        <h3>Receitas e Despesas por Cartão</h3>
+        <canvas id="barrasCartoes" width="600" height="400"></canvas>
+    </div>
+</div>
 
-        const ctx1 = document.getElementById('graficoCategoria').getContext('2d');
-        new Chart(ctx1, {
-            type: 'pie',
-            data: {
-                labels: categoriaLabels,
-                datasets: [{
-                    label: 'Total por Categoria',
-                    data: categoriaTotais,
-                    backgroundColor: [
-                        '#3498db', '#e74c3c', '#2ecc71', '#f39c12',
-                        '#9b59b6', '#1abc9c', '#34495e', '#95a5a6'
-                    ],
-                    borderColor: '#fff',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                    }
-                }
-            }
-        });
+<!-- Bibliotecas necessárias -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 
-        // Dados do gráfico de barras por cartão (receita e despesa)
-        const cartaoLabels = {{ labels_cartoes | tojson }};
-        const cartaoReceitas = {{ cartao_receitas | tojson }};
-        const cartaoDespesas = {{ valores_cartoes | tojson }};
+<script>
+    // Pizza categorias
+    const ctxPizza = document.getElementById('pizzaCategorias').getContext('2d');
+    const labelsCategorias = {{ labels_categorias|tojson }};
+    const valoresCategorias = {{ valores_categorias|tojson }};
 
-        const ctx2 = document.getElementById('graficoCartao').getContext('2d');
-        new Chart(ctx2, {
-            type: 'bar',
-            data: {
-                labels: cartaoLabels,
-                datasets: [
-                    {
-                        label: 'Receita',
-                        data: cartaoReceitas,
-                        backgroundColor: '#2ecc71'
-                    },
-                    {
-                        label: 'Despesa',
-                        data: cartaoDespesas,
-                        backgroundColor: '#e74c3c'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            // Formata ticks como moeda BR
-                            callback: function(value) {
-                                return 'R$ ' + value.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-                            }
+    const pizzaCategorias = new Chart(ctxPizza, {
+        type: 'pie',
+        data: {
+            labels: labelsCategorias,
+            datasets: [{
+                data: valoresCategorias,
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                    '#9966FF', '#FF9F40', '#66FF66', '#FF6666'
+                ],
+            }]
+        },
+        options: {
+            responsive: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            let value = context.parsed || 0;
+                            let total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                            let perc = total > 0 ? (value / total * 100).toFixed(2) : 0;
+                            return `${label}: R$ ${value.toFixed(2)} (${perc}%)`;
                         }
                     }
                 },
-                plugins: {
-                    legend: {
-                        position: 'top',
+                legend: {
+                    position: 'right',
+                },
+                datalabels: {
+                    formatter: (value, ctx) => {
+                        let total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                        let perc = total > 0 ? (value / total * 100).toFixed(2) : 0;
+                        return perc + '%';
                     },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': R$ ' + context.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-                            }
-                        }
-                    }
+                    color: '#fff',
                 }
             }
-        });
-    </script>
+        },
+        plugins: [ChartDataLabels]
+    });
+
+    // Barras receitas e despesas por cartão
+    const ctxBarras = document.getElementById('barrasCartoes').getContext('2d');
+    const labelsCartoes = {{ labels_cartoes|tojson }};
+    const valoresReceitas = {{ valores_receitas|tojson }};
+    const valoresDespesas = {{ valores_despesas|tojson }};
+
+    const barrasCartoes = new Chart(ctxBarras, {
+        type: 'bar',
+        data: {
+            labels: labelsCartoes,
+            datasets: [
+                {
+                    label: 'Receitas',
+                    backgroundColor: '#36A2EB',
+                    data: valoresReceitas,
+                },
+                {
+                    label: 'Despesas',
+                    backgroundColor: '#FF6384',
+                    data: valoresDespesas,
+                }
+            ]
+        },
+        options: {
+            responsive: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: { position: 'top' }
+            }
+        }
+    });
+</script>
+
 </body>
 </html>

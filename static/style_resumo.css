@@ -1,0 +1,140 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f7f9fc;
+  color: #333;
+  line-height: 1.6;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+/* Container geral dos filtros */
+.filtros {
+  background: #fff;
+  padding: 20px 25px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgb(0 0 0 / 0.1);
+  margin-bottom: 30px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 15px;
+}
+
+.filtros form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.filtros label {
+  font-weight: 600;
+  color: #555;
+  margin-right: 8px;
+  min-width: 50px;
+}
+
+.filtros input[type="month"],
+.filtros select {
+  padding: 6px 10px;
+  border: 1.5px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+  min-width: 150px;
+}
+
+.filtros input[type="month"]:focus,
+.filtros select:focus {
+  border-color: #36a2eb;
+  outline: none;
+}
+
+.filtros button {
+  background-color: #36a2eb;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  min-width: 100px;
+  font-weight: 700;
+}
+
+.filtros button:hover {
+  background-color: #2b82c9;
+}
+
+/* Container dos gráficos */
+.graficos {
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Card de cada gráfico */
+.graficos > div {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 6px 15px rgb(0 0 0 / 0.1);
+  padding: 25px 30px;
+  flex: 1 1 400px;
+  max-width: 650px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.graficos h3 {
+  margin-bottom: 20px;
+  font-weight: 700;
+  color: #222;
+  text-align: center;
+}
+
+/* Canvas styling */
+canvas {
+  background: #fafafa;
+  border: 1px solid #ddd;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: inset 0 0 8px rgb(0 0 0 / 0.05);
+}
+
+/* Responsividade */
+@media (max-width: 1000px) {
+  .graficos {
+    flex-direction: column;
+    gap: 30px;
+  }
+  
+  .graficos > div {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .filtros form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filtros label {
+    margin-bottom: 5px;
+  }
+
+  .filtros button {
+    width: 100%;
+  }
+}

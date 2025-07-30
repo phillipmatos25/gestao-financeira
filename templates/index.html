@@ -19,23 +19,18 @@
         </a>
     </div>
 
-    <!-- Caixas de Totais -->
-    <div class="caixas-totais">
-        <div class="caixa receita">
-            <h3>Total de Receitas</h3>
-            <p>{{ total_receitas | format_currency }}</p>
-        </div>
-        <div class="caixa despesa">
-            <h3>Total de Despesas</h3>
-            <p>{{ total_despesas | format_currency }}</p>
-        </div>
-    </div>
-
     <!-- FILTROS DE MÊS E PAGAMENTO -->
     <form method="get" class="filtros-container">
         <div>
             <label for="mes">Mês de Referência:</label>
-            <input type="month" name="mes" id="mes" value="{{ filtro_mes }}">
+            <select name="mes" id="mes">
+                <option value="" {% if not filtro_mes %}selected{% endif %}>Todos os Meses</option>
+                    {% for mes in ['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12'] %}
+                <option value="{{ mes }}" {% if filtro_mes == mes %}selected{% endif %}>
+                     {{ mes[5:] }}/{{ mes[:4] }}
+             </option>
+                    {% endfor %}
+            </select>
         </div>
         <div>
             <label for="pago">Status Parcela:</label>
@@ -50,43 +45,97 @@
         </div>
     </form>
 
-    <!-- FORMULÁRIO DE INCLUSÃO -->
+    <!-- Caixas de Totais -->
+    <div class="caixas-totais">
+        <div class="caixa receita">
+            <h3>Total de Receitas</h3>
+            <p>{{ total_receitas | format_currency }}</p>
+        </div>
+        <div class="caixa despesa">
+            <h3>Total de Despesas</h3>
+            <p>{{ total_despesas | format_currency }}</p>
+        </div>
+    </div>
+
+    <!-- FORMULÁRIO DE INCLUSÃO COM LABELS -->
     <form method="post" class="formulario">
-        <input type="date" name="data" required>
-        <input type="text" name="descricao" placeholder="Descrição" required>
+        <div>
+            <label for="data">Data Evento:</label>
+            <input type="date" name="data" id="data">
+        </div>
 
-        <select name="categoria" required>
-            <option value="" disabled selected>Categoria</option>
-            {% for c in categorias %}
-                <option value="{{ c['nome'] }}">{{ c['nome'] }}</option>
-            {% endfor %}
-        </select>
+        <div>
+            <label for="data_pagamento">Pagamento:</label>
+            <input type="date" name="data_pagamento" id="data_pagamento"required>
+        </div>
 
-        <select name="cartao" required>
-            <option value="" disabled selected>Cartão</option>
-            {% for cartao in cartoes %}
-                <option value="{{ cartao['id'] }}">
-                    {{ cartao['bandeira'] }} ({{ cartao['nome'] }})
-                </option>
-            {% endfor %}
-        </select>
+        <div>
+            <label for="descricao">Descrição:</label>
+            <input type="text" name="descricao" id="descricao" placeholder="Descrição" required>
+        </div>
 
-        <input type="number" name="parcelas" min="1" placeholder="Parcelas" value="1" required>
-        <input type="number" name="valor" step="0.01" placeholder="Valor (R$)" required>
+        <div>
+            <label for="categoria">Categoria:</label>
+            <select name="categoria" id="categoria" required>
+                <option value="" disabled selected>Categoria</option>
+                {% for c in categorias %}
+                    <option value="{{ c['nome'] }}">{{ c['descricao'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
-        <select name="tipo" required>
-            <option value="despesa">Despesa</option>
-            <option value="receita">Receita</option>
-        </select>
+        <div>
+            <label for="cartao">Cartão:</label>
+            <select name="cartao" id="cartao" required>
+                <option value="" disabled selected>Cartão</option>
+                {% for cartao in cartoes %}
+                    <option value="{{ cartao['id'] }}">
+                        {{ cartao['bandeira'] }} ({{ cartao['nome'] }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
 
-        <button type="submit" class="btn-incluir">Adicionar</button>
+        <!-- Container que junta Parcelas e Fixo -->
+        <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
+
+        <!-- Parcelas -->
+        <div style="display: flex; flex-direction: column;">
+            <label for="parcelas">Parcelas:</label>
+            <input type="number" name="parcelas" id="parcelas" min="1" placeholder="Parcelas" value="1" required>
+        </div>
+
+        <!-- Fixo (checkbox + label) -->
+        <div style="display: flex; align-items: center; margin-top: -88px; gap: 0.25rem;">
+            <label for="fixa" style="margin: 8; margin-right: -155px;">Fixo</label>
+            <input type="checkbox" id="fixa" name="fixa" value="1" style="margin-right: -155px;;">
+        </div>
+
+        </div>
+
+        <div>
+            <label for="valor">Valor (R$):</label>
+            <input type="number" name="valor" id="valor" step="0.01" placeholder="Valor (R$)" required>
+        </div>
+
+        <div>
+            <label for="tipo">Tipo:</label>
+            <select name="tipo" id="tipo" required>
+                <option value="despesa">Despesa</option>
+                <option value="receita">Receita</option>
+            </select>
+        </div>
+
+        <div>
+            <button type="submit" class="btn-incluir">Adicionar</button>
+        </div>
     </form>
 
     <!-- TABELA DE MOVIMENTAÇÕES -->
     <table>
         <thead>
             <tr>
-                <th>Data</th>
+                <th>Data Compra</th>
                 <th>Descrição</th>
                 <th>Categoria</th>
                 <th>Cartão</th>
