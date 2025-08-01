@@ -53,6 +53,31 @@
             </ul>
         </section>
 
+        <!-- Formulário de Cadastro de Usuário -->
+        <section class="form-section">
+            <h2>Cadastro de Usuários</h2>
+            {% if usuario == 'phillip' %}
+                <form method="post" class="form">
+                    <input type="text" name="novo_username" placeholder="Nome de Usuário" required>
+                    <input type="password" name="novo_senha" placeholder="Senha" required>
+                    <button type="submit" name="add_usuario">Cadastrar Usuário</button>
+                </form>
+                <h3>Usuários Cadastrados</h3>
+                <ul>
+                    {% for u in usuarios %}
+                        <li>{{ u['username'] }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p style="color: gray;">Somente o usuário <b>phillip</b> pode cadastrar novos usuários.</p>
+                <form class="form">
+                    <input type="text" placeholder="Nome de Usuário" disabled>
+                    <input type="password" placeholder="Senha" disabled>
+                    <button type="button" disabled>Cadastrar Usuário</button>
+                </form>
+            {% endif %}
+        </section>
+
         <!-- Botão para voltar à tela inicial -->
         <div class="center">
             <a href="{{ url_for('index') }}">

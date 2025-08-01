@@ -25,11 +25,11 @@
             <label for="mes">Mês de Referência:</label>
             <select name="mes" id="mes">
                 <option value="" {% if not filtro_mes %}selected{% endif %}>Todos os Meses</option>
-                    {% for mes in ['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12'] %}
-                <option value="{{ mes }}" {% if filtro_mes == mes %}selected{% endif %}>
-                     {{ mes[5:] }}/{{ mes[:4] }}
-             </option>
-                    {% endfor %}
+                {% for mes in ['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12'] %}
+                    <option value="{{ mes }}" {% if filtro_mes == mes %}selected{% endif %}>
+                        {{ mes[5:] }}/{{ mes[:4] }}
+                    </option>
+                {% endfor %}
             </select>
         </div>
         <div>
@@ -57,29 +57,37 @@
         </div>
     </div>
 
-    <!-- FORMULÁRIO DE INCLUSÃO COM LABELS -->
+    <!-- FORMULÁRIO DE INCLUSÃO/EDIÇÃO -->
     <form method="post" class="formulario">
+        <input type="hidden" name="movimentacao_id" value="{{ movimentacao_edit.id if movimentacao_edit else '' }}">
+
         <div>
             <label for="data">Data Evento:</label>
-            <input type="date" name="data" id="data">
+            <input type="date" name="data" id="data"
+                   value="{{ movimentacao_edit.data if movimentacao_edit else '' }}">
         </div>
 
         <div>
-            <label for="data_pagamento">Pagamento:</label>
-            <input type="date" name="data_pagamento" id="data_pagamento"required>
+            <label for="data_pagamento">Vencimento:</label>
+            <input type="date" name="data_pagamento" id="data_pagamento" required
+                   value="{{ movimentacao_edit.data_pagamento if movimentacao_edit else '' }}">
         </div>
 
         <div>
             <label for="descricao">Descrição:</label>
-            <input type="text" name="descricao" id="descricao" placeholder="Descrição" required>
+            <input type="text" name="descricao" id="descricao" placeholder="Descrição" required
+                   value="{{ movimentacao_edit.descricao if movimentacao_edit else '' }}">
         </div>
 
         <div>
             <label for="categoria">Categoria:</label>
-            <select name="categoria" id="categoria" required>
-                <option value="" disabled selected>Categoria</option>
-                {% for c in categorias %}
-                    <option value="{{ c['nome'] }}">{{ c['descricao'] }}</option>
+            <select name="categoria" required>
+                <option value="">Selecione...</option>
+                {% for cat in categorias %}
+                    <option value="{{ cat['id'] }}"
+                        {% if movimentacao_edit and movimentacao_edit.categoria == cat['nome'] %}selected{% endif %}>
+                        {{ cat['nome'] }}
+                    </option>
                 {% endfor %}
             </select>
         </div>
@@ -87,47 +95,40 @@
         <div>
             <label for="cartao">Cartão:</label>
             <select name="cartao" id="cartao" required>
-                <option value="" disabled selected>Cartão</option>
+                <option value="" disabled {% if not movimentacao_edit %}selected{% endif %}>Cartão</option>
                 {% for cartao in cartoes %}
-                    <option value="{{ cartao['id'] }}">
+                    <option value="{{ cartao['id'] }}"
+                        {% if movimentacao_edit and movimentacao_edit.cartao and movimentacao_edit.cartao['nome'] == cartao['nome'] %}selected{% endif %}>
                         {{ cartao['bandeira'] }} ({{ cartao['nome'] }})
                     </option>
                 {% endfor %}
             </select>
         </div>
 
-        <!-- Container que junta Parcelas e Fixo -->
-        <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
-
-        <!-- Parcelas -->
-        <div style="display: flex; flex-direction: column;">
+        <div>
             <label for="parcelas">Parcelas:</label>
-            <input type="number" name="parcelas" id="parcelas" min="1" placeholder="Parcelas" value="1" required>
-        </div>
-
-        <!-- Fixo (checkbox + label) -->
-        <div style="display: flex; align-items: center; margin-top: -88px; gap: 0.25rem;">
-            <label for="fixa" style="margin: 8; margin-right: -155px;">Fixo</label>
-            <input type="checkbox" id="fixa" name="fixa" value="1" style="margin-right: -155px;;">
-        </div>
-
+            <input type="number" name="parcelas" id="parcelas" min="1"
+                   value="{{ movimentacao_edit.parcelas if movimentacao_edit else 1 }}" required>
         </div>
 
         <div>
             <label for="valor">Valor (R$):</label>
-            <input type="number" name="valor" id="valor" step="0.01" placeholder="Valor (R$)" required>
+            <input type="number" step="0.01" name="valor" id="valor" placeholder="Valor (R$)" required
+                   value="{{ movimentacao_edit.valor if movimentacao_edit else '' }}">
         </div>
 
         <div>
             <label for="tipo">Tipo:</label>
             <select name="tipo" id="tipo" required>
-                <option value="despesa">Despesa</option>
-                <option value="receita">Receita</option>
+                <option value="despesa" {% if movimentacao_edit and movimentacao_edit.tipo == 'despesa' %}selected{% endif %}>Despesa</option>
+                <option value="receita" {% if movimentacao_edit and movimentacao_edit.tipo == 'receita' %}selected{% endif %}>Receita</option>
             </select>
         </div>
 
         <div>
-            <button type="submit" class="btn-incluir">Adicionar</button>
+            <button type="submit" class="btn-incluir">
+                {{ 'Salvar Alterações' if movimentacao_edit else 'Adicionar' }}
+            </button>
         </div>
     </form>
 
@@ -136,6 +137,7 @@
         <thead>
             <tr>
                 <th>Data Compra</th>
+                <th>Vencimento</th>
                 <th>Descrição</th>
                 <th>Categoria</th>
                 <th>Cartão</th>
@@ -150,6 +152,7 @@
             {% for m in movimentacoes %}
                 <tr>
                     <td>{{ m.data }}</td>
+                    <td>{{ m.data_pagamento }}</td>
                     <td>{{ m.descricao }}</td>
                     <td>{{ m.categoria }}</td>
                     <td>
@@ -175,9 +178,13 @@
                         </form>
                     </td>
                     <td>
+                        <!-- Botão Editar -->
+                        <a href="{{ url_for('index', edit_id=m.id) }}" class="btn-editar" title="Editar">✏️</a>
+
+                        <!-- Botão Excluir -->
                         <form method="post" style="display:inline;">
                             <input type="hidden" name="movimentacao_id" value="{{ m.id }}">
-                            <button type="submit" name="excluir_movimentacao" class="btn-excluir">Excluir</button>
+                            <button type="submit" name="excluir_movimentacao" class="btn-excluir">🗑️</button>
                         </form>
                     </td>
                 </tr>
