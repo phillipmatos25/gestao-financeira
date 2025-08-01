@@ -65,7 +65,7 @@
         </div>
 
         <div>
-            <label for="data_pagamento">Pagamento:</label>
+            <label for="data_pagamento">Vencimento:</label>
             <input type="date" name="data_pagamento" id="data_pagamento"required>
         </div>
 
@@ -76,11 +76,11 @@
 
         <div>
             <label for="categoria">Categoria:</label>
-            <select name="categoria" id="categoria" required>
-                <option value="" disabled selected>Categoria</option>
-                {% for c in categorias %}
-                    <option value="{{ c['nome'] }}">{{ c['descricao'] }}</option>
-                {% endfor %}
+            <select name="categoria" required>
+                <option value="">Selecione...</option>
+                    {% for cat in categorias %}
+                <option value="{{ cat['id'] }}">{{ cat['nome'] }}</option>
+                    {% endfor %}
             </select>
         </div>
 
@@ -136,6 +136,7 @@
         <thead>
             <tr>
                 <th>Data Compra</th>
+                <th>Vencimento</th>
                 <th>Descrição</th>
                 <th>Categoria</th>
                 <th>Cartão</th>
@@ -150,6 +151,7 @@
             {% for m in movimentacoes %}
                 <tr>
                     <td>{{ m.data }}</td>
+                    <td>{{ m.data_pagamento }}</td>
                     <td>{{ m.descricao }}</td>
                     <td>{{ m.categoria }}</td>
                     <td>
@@ -195,4 +197,4 @@
         </tfoot>
     </table>
 </body>
-</html>
+</html> 
