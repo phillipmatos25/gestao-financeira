@@ -173,21 +173,66 @@ def index():
         cartao_id = request.form['cartao']
         cartao_id = int(cartao_id) if cartao_id.isdigit() else None
 
-        valor = float(request.form['valor'])
+        valor_total = float(request.form['valor'])
         tipo = request.form['tipo']
         parcelas = int(request.form.get('parcelas', 1))
+        fixa = request.form.get('fixa') == 'on'
 
-        if movimentacao_id:  # UPDATE
+        data_obj = datetime.strptime(data, '%Y-%m-%d')
+
+        if movimentacao_id:  # UPDATE (mantém simples, só altera um registro)
             cursor.execute('''
                 UPDATE movimentacoes
                 SET data = ?, data_pagamento = ?, descricao = ?, categoria = ?, cartao = ?, valor = ?, tipo = ?, parcelas = ?
                 WHERE id = ? AND usuario_id = ?
-            ''', (data, data_pagamento, descricao, categoria_nome, cartao_id, valor, tipo, parcelas, movimentacao_id, usuario_id))
-        else:  # INSERT
-            cursor.execute('''
-                INSERT INTO movimentacoes (data, data_pagamento, descricao, categoria, cartao, valor, tipo, parcelas, parcela_numero, paga, usuario_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?)
-            ''', (data, data_pagamento, descricao, categoria_nome, cartao_id, valor, tipo, parcelas, usuario_id))
+            ''', (data, data_pagamento, descricao, categoria_nome, cartao_id, valor_total, tipo, parcelas, movimentacao_id, usuario_id))
+        else:  # INSERT (com regra fixa/parcelada)
+            if fixa:
+                for i in range(12):
+                    data_parcela = data_obj + relativedelta(months=i)
+                    cursor.execute('''
+                        INSERT INTO movimentacoes 
+                        (data, data_pagamento, descricao, categoria, cartao, valor, tipo, parcelas, parcela_numero, paga, usuario_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+                    ''', (
+                        data_parcela.strftime('%Y-%m-%d'),
+                        data_pagamento,
+                        descricao,
+                        categoria_nome,
+                        cartao_id,
+                        valor_total,
+                        tipo,
+                        1,
+                        1,
+                        usuario_id
+                    ))
+            else:
+                valor_parcela = round(valor_total / parcelas, 2)
+                valor_total_parcelas = valor_parcela * parcelas
+                diferenca = round(valor_total - valor_total_parcelas, 2)
+
+                for i in range(parcelas):
+                    data_parcela = data_obj + relativedelta(months=i)
+                    valor_atual = valor_parcela
+                    if i == parcelas - 1:
+                        valor_atual = round(valor_parcela + diferenca, 2)
+
+                    cursor.execute('''
+                        INSERT INTO movimentacoes 
+                        (data, data_pagamento, descricao, categoria, cartao, valor, tipo, parcelas, parcela_numero, paga, usuario_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+                    ''', (
+                        data_parcela.strftime('%Y-%m-%d'),
+                        data_pagamento,
+                        descricao,
+                        categoria_nome,
+                        cartao_id,
+                        valor_atual,
+                        tipo,
+                        parcelas,
+                        i + 1,
+                        usuario_id
+                    ))
 
         conn.commit()
         return redirect(url_for('index', mes=filtro_mes, pago=filtro_pago))
@@ -287,7 +332,6 @@ def resumo():
     params = [usuario_id]
 
     if filtro_mes:
-        # filtro pelo mês na data_pagamento
         query += " AND strftime('%Y-%m', data_pagamento) = ?"
         params.append(filtro_mes)
 
@@ -328,10 +372,8 @@ def resumo():
             if cartao_id is not None:
                 cartoes_receitas[cartao_id] += valor
 
-    # Lista completa dos cartões que aparecem (unificando despesas e receitas)
     todos_cartoes_ids = sorted(set(list(cartoes_despesas.keys()) + list(cartoes_receitas.keys())))
 
-    # Aqui garantimos que labels_cartoes são os nomes, e não os IDs
     labels_cartoes = [cartoes_map.get(cid, f"Cartão {cid}") for cid in todos_cartoes_ids]
     valores_despesas = [cartoes_despesas.get(cid, 0) for cid in todos_cartoes_ids]
     valores_receitas = [cartoes_receitas.get(cid, 0) for cid in todos_cartoes_ids]
@@ -340,15 +382,6 @@ def resumo():
     valores_categorias = list(categorias_totais.values())
 
     conn.close()
-
-    # DEBUG - Remova depois se quiser:
-    print("Filtro mês:", filtro_mes)
-    print("Filtro pago:", filtro_pago)
-    print("Labels categorias:", labels_categorias)
-    print("Valores categorias:", valores_categorias)
-    print("Labels cartões:", labels_cartoes)
-    print("Valores despesas:", valores_despesas)
-    print("Valores receitas:", valores_receitas)
 
     return render_template('resumo.html',
                            labels_cartoes=labels_cartoes,
