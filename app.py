@@ -173,66 +173,21 @@ def index():
         cartao_id = request.form['cartao']
         cartao_id = int(cartao_id) if cartao_id.isdigit() else None
 
-        valor_total = float(request.form['valor'])
+        valor = float(request.form['valor'])
         tipo = request.form['tipo']
         parcelas = int(request.form.get('parcelas', 1))
-        fixa = request.form.get('fixa') == 'on'
 
-        data_obj = datetime.strptime(data, '%Y-%m-%d')
-
-        if movimentacao_id:  # UPDATE (mantém simples, só altera um registro)
+        if movimentacao_id:  # UPDATE
             cursor.execute('''
                 UPDATE movimentacoes
                 SET data = ?, data_pagamento = ?, descricao = ?, categoria = ?, cartao = ?, valor = ?, tipo = ?, parcelas = ?
                 WHERE id = ? AND usuario_id = ?
-            ''', (data, data_pagamento, descricao, categoria_nome, cartao_id, valor_total, tipo, parcelas, movimentacao_id, usuario_id))
-        else:  # INSERT (com regra fixa/parcelada)
-            if fixa:
-                for i in range(12):
-                    data_parcela = data_obj + relativedelta(months=i)
-                    cursor.execute('''
-                        INSERT INTO movimentacoes 
-                        (data, data_pagamento, descricao, categoria, cartao, valor, tipo, parcelas, parcela_numero, paga, usuario_id)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
-                    ''', (
-                        data_parcela.strftime('%Y-%m-%d'),
-                        data_pagamento,
-                        descricao,
-                        categoria_nome,
-                        cartao_id,
-                        valor_total,
-                        tipo,
-                        1,
-                        1,
-                        usuario_id
-                    ))
-            else:
-                valor_parcela = round(valor_total / parcelas, 2)
-                valor_total_parcelas = valor_parcela * parcelas
-                diferenca = round(valor_total - valor_total_parcelas, 2)
-
-                for i in range(parcelas):
-                    data_parcela = data_obj + relativedelta(months=i)
-                    valor_atual = valor_parcela
-                    if i == parcelas - 1:
-                        valor_atual = round(valor_parcela + diferenca, 2)
-
-                    cursor.execute('''
-                        INSERT INTO movimentacoes 
-                        (data, data_pagamento, descricao, categoria, cartao, valor, tipo, parcelas, parcela_numero, paga, usuario_id)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
-                    ''', (
-                        data_parcela.strftime('%Y-%m-%d'),
-                        data_pagamento,
-                        descricao,
-                        categoria_nome,
-                        cartao_id,
-                        valor_atual,
-                        tipo,
-                        parcelas,
-                        i + 1,
-                        usuario_id
-                    ))
+            ''', (data, data_pagamento, descricao, categoria_nome, cartao_id, valor, tipo, parcelas, movimentacao_id, usuario_id))
+        else:  # INSERT
+            cursor.execute('''
+                INSERT INTO movimentacoes (data, data_pagamento, descricao, categoria, cartao, valor, tipo, parcelas, parcela_numero, paga, usuario_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?)
+            ''', (data, data_pagamento, descricao, categoria_nome, cartao_id, valor, tipo, parcelas, usuario_id))
 
         conn.commit()
         return redirect(url_for('index', mes=filtro_mes, pago=filtro_pago))
@@ -326,19 +281,11 @@ def resumo():
     usuario_id = cursor.fetchone()['id']
 
     filtro_mes = request.args.get('mes')
-    filtro_pago = request.args.get('pago')
-
     query = "SELECT * FROM movimentacoes WHERE usuario_id = ?"
     params = [usuario_id]
-
     if filtro_mes:
-        query += " AND strftime('%Y-%m', data_pagamento) = ?"
+        query += " AND strftime('%Y-%m', data) = ?"
         params.append(filtro_mes)
-
-    if filtro_pago == 'sim':
-        query += " AND paga = 1"
-    elif filtro_pago == 'nao':
-        query += " AND paga = 0"
 
     cursor.execute(query, params)
     movimentacoes = cursor.fetchall()
@@ -351,19 +298,13 @@ def resumo():
     cursor.execute('SELECT id, nome FROM cartoes ORDER BY nome')
     cartoes_map = {row['id']: row['nome'] for row in cursor.fetchall()}
 
-    movimentacoes_validas = []
-    for m in movimentacoes:
-        try:
-            cartao_id = int(m['cartao']) if m['cartao'] is not None else None
-        except Exception:
-            cartao_id = None
-        if cartao_id is None or cartao_id in cartoes_map:
-            movimentacoes_validas.append(m)
+    # Filtra movimentações que possuem cartão válido ou cartão é None
+    movimentacoes_validas = [m for m in movimentacoes if m['cartao'] in cartoes_map or m['cartao'] is None]
 
     for m in movimentacoes_validas:
         valor = m['valor']
         tipo = m['tipo']
-        cartao_id = int(m['cartao']) if m['cartao'] is not None else None
+        cartao_id = m['cartao']
         if tipo == 'despesa':
             categorias_totais[m['categoria']] += valor
             if cartao_id is not None:
@@ -372,8 +313,10 @@ def resumo():
             if cartao_id is not None:
                 cartoes_receitas[cartao_id] += valor
 
+    # Lista completa dos cartões que aparecem (unificando despesas e receitas)
     todos_cartoes_ids = sorted(set(list(cartoes_despesas.keys()) + list(cartoes_receitas.keys())))
 
+    # Aqui garantimos que labels_cartoes são os nomes, e não os IDs
     labels_cartoes = [cartoes_map.get(cid, f"Cartão {cid}") for cid in todos_cartoes_ids]
     valores_despesas = [cartoes_despesas.get(cid, 0) for cid in todos_cartoes_ids]
     valores_receitas = [cartoes_receitas.get(cid, 0) for cid in todos_cartoes_ids]
@@ -390,7 +333,6 @@ def resumo():
                            labels_categorias=labels_categorias,
                            valores_categorias=valores_categorias,
                            filtro_mes=filtro_mes,
-                           filtro_pago=filtro_pago,
                            usuario=session['usuario'])
 
 
