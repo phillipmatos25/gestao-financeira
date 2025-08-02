@@ -254,7 +254,7 @@ def index():
     categorias = cursor.fetchall()
 
     # Buscar cartões
-    cursor.execute('SELECT id, nome, bandeira FROM cartoes ORDER BY nome')
+    cursor.execute('SELECT id, nome, bandeira FROM cartoes ORDER BY bandeira')
     cartoes = cursor.fetchall()
     cartoes_dict = {c['id']: {'nome': c['nome'], 'bandeira': c['bandeira']} for c in cartoes}
 
