@@ -1,17 +1,41 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, date
 import sqlite3
-from dateutil.relativedelta import relativedelta  # pip install python-dateutil
+from dateutil.relativedelta import relativedelta
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = "chave-secreta"  # necessário para sessão
+app.secret_key = "chave-secreta"
 
 
+# ==============================
+# DATABASE
+# ==============================
 def get_db_connection():
     conn = sqlite3.connect('database.db')
     conn.row_factory = sqlite3.Row
     return conn
+
+
+# ==============================
+# GERAR MESES (2025 ATÉ HOJE)
+# ==============================
+def gerar_meses(desde_ano=2025):
+    hoje = date.today()
+    meses = []
+
+    ano = desde_ano
+    mes = 1
+
+    while (ano < hoje.year) or (ano == hoje.year and mes <= hoje.month):
+        meses.append(f"{ano}-{mes:02d}")
+        mes += 1
+        if mes > 12:
+            mes = 1
+            ano += 1
+
+    return meses
 
 
 # ==============================
@@ -20,17 +44,18 @@ def get_db_connection():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
+
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
 
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM usuarios WHERE username = ? AND senha = ?", (username, password))
+        cursor.execute("SELECT * FROM usuarios WHERE username = ?", (username,))
         user = cursor.fetchone()
         conn.close()
 
-        if user:
+        if user and check_password_hash(user['senha'], password):
             session['usuario'] = username
             return redirect(url_for('index'))
         else:
@@ -46,7 +71,7 @@ def logout():
 
 
 # ==============================
-# CADASTROS (Categorias, Cartões e Usuários)
+# CADASTROS
 # ==============================
 @app.route('/cadastros', methods=['GET', 'POST'])
 def cadastros():
@@ -57,64 +82,76 @@ def cadastros():
     cursor = conn.cursor()
 
     if request.method == 'POST':
+
         if 'add_categoria' in request.form:
-            nome_categoria = request.form['categoria']
-            descricao_categoria = request.form['descricao_categoria']
-            cursor.execute('INSERT INTO categorias (nome, descricao) VALUES (?, ?)', (nome_categoria, descricao_categoria))
-            conn.commit()
+            cursor.execute(
+                'INSERT INTO categorias (nome, descricao) VALUES (?, ?)',
+                (request.form['categoria'], request.form['descricao_categoria'])
+            )
 
         elif 'add_cartao' in request.form:
-            cartao = request.form['cartao']
-            bandeira_cartao = request.form['bandeira_cartao']
-            cursor.execute('INSERT INTO cartoes (nome, bandeira) VALUES (?, ?)', (cartao, bandeira_cartao))
-            conn.commit()
+            cursor.execute(
+                'INSERT INTO cartoes (nome, bandeira) VALUES (?, ?)',
+                (request.form['cartao'], request.form['bandeira_cartao'])
+            )
 
         elif 'excluir_categoria' in request.form:
-            categoria_id = request.form['categoria_id']
-            cursor.execute('DELETE FROM categorias WHERE id = ?', (categoria_id,))
-            conn.commit()
+            cursor.execute(
+                'DELETE FROM categorias WHERE id = ?',
+                (request.form['categoria_id'],)
+            )
 
         elif 'excluir_cartao' in request.form:
-            cartao_id = request.form['cartao_id']
-            cursor.execute('DELETE FROM cartoes WHERE id = ?', (cartao_id,))
-            conn.commit()
+            cursor.execute(
+                'DELETE FROM cartoes WHERE id = ?',
+                (request.form['cartao_id'],)
+            )
 
         elif 'add_usuario' in request.form:
-            username = request.form['novo_username']
-            senha = request.form['novo_senha']
             try:
-                cursor.execute("INSERT INTO usuarios (username, senha) VALUES (?, ?)", (username, senha))
-                conn.commit()
+                cursor.execute(
+                    "INSERT INTO usuarios (username, senha) VALUES (?, ?)",
+                    (request.form['novo_username'],
+                     generate_password_hash(request.form['novo_senha']))
+                )
             except sqlite3.IntegrityError:
-                pass  # usuário repetido
+                pass
 
-    cursor.execute('SELECT * FROM categorias')
+        conn.commit()
+
+    cursor.execute('SELECT * FROM categorias ORDER BY nome ASC')
     categorias = cursor.fetchall()
 
-    cursor.execute('SELECT * FROM cartoes')
+    cursor.execute('SELECT * FROM cartoes ORDER BY bandeira ASC')
     cartoes = cursor.fetchall()
 
-    cursor.execute('SELECT * FROM usuarios')
+    cursor.execute('SELECT id, username FROM usuarios')
     usuarios = cursor.fetchall()
 
     conn.close()
-    return render_template('cadastros.html',
-                           categorias=categorias,
-                           cartoes=cartoes,
-                           usuarios=usuarios,
-                           usuario=session['usuario'])
+
+    return render_template(
+        'cadastros.html',
+        categorias=categorias,
+        cartoes=cartoes,
+        usuarios=usuarios,
+        usuario=session['usuario']
+    )
 
 
 # ==============================
-# FILTRO DE MOEDA
+# FILTRO MOEDA (BLINDADO)
 # ==============================
 @app.template_filter('format_currency')
 def format_currency(valor):
-    return f"R$ {valor:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    try:
+        return f"R$ {float(valor):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    except (TypeError, ValueError):
+        return "R$ 0,00"
 
 
 # ==============================
-# REDIRECIONAR ROTA RAIZ PARA LOGIN
+# HOME
 # ==============================
 @app.route('/')
 def home():
@@ -135,173 +172,119 @@ def index():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # pegar ID do usuário logado
     cursor.execute("SELECT id FROM usuarios WHERE username = ?", (session['usuario'],))
     usuario_id = cursor.fetchone()['id']
 
+    # ==========================
+    # POST
+    # ==========================
     if request.method == 'POST':
+
         if 'excluir_movimentacao' in request.form:
-            movimentacao_id = request.form['movimentacao_id']
-            cursor.execute('DELETE FROM movimentacoes WHERE id = ? AND usuario_id = ?', (movimentacao_id, usuario_id))
+            cursor.execute(
+                'DELETE FROM movimentacoes WHERE id = ? AND usuario_id = ?',
+                (request.form['movimentacao_id'], usuario_id)
+            )
             conn.commit()
             return redirect(url_for('index', mes=filtro_mes, pago=filtro_pago))
 
         if 'alterar_status_parcela' in request.form:
-            movimentacao_id = request.form['movimentacao_id']
-            paga_novo = int(request.form['paga'])
-            cursor.execute('UPDATE movimentacoes SET paga = ? WHERE id = ? AND usuario_id = ?', (paga_novo, movimentacao_id, usuario_id))
+            cursor.execute(
+                'UPDATE movimentacoes SET paga = ? WHERE id = ? AND usuario_id = ?',
+                (int(request.form['paga']), request.form['movimentacao_id'], usuario_id)
+            )
             conn.commit()
             return redirect(url_for('index', mes=filtro_mes, pago=filtro_pago))
 
-        # Dados do formulário
-        data_str = request.form['data']
-        data_pagamento_str = request.form.get('data_pagamento')
-        data_pagamento = data_pagamento_str if data_pagamento_str else None
+        data_obj = datetime.strptime(request.form['data'], '%Y-%m-%d')
+        data_pagamento = request.form.get('data_pagamento')
+        data_pagamento_obj = datetime.strptime(data_pagamento, '%Y-%m-%d') if data_pagamento else None
 
         descricao = request.form['descricao']
-
-        # Buscar nome da categoria
-        categoria_id = request.form.get('categoria')
-        categoria_nome = "Sem categoria"
-        if categoria_id and categoria_id.isdigit():
-            cursor.execute("SELECT nome FROM categorias WHERE id = ?", (categoria_id,))
-            row = cursor.fetchone()
-            if row:
-                categoria_nome = row['nome']
-
-        cartao_id = request.form['cartao']
-        cartao_id = int(cartao_id) if cartao_id.isdigit() else None
-
         valor_total = float(request.form['valor'])
         tipo = request.form['tipo']
         parcelas = int(request.form.get('parcelas', 1))
         fixa = request.form.get('fixa') == '1'
 
-        data_obj = datetime.strptime(data_str, '%Y-%m-%d')
-        data_pagamento_obj = datetime.strptime(data_pagamento, '%Y-%m-%d') if data_pagamento else None
+        cursor.execute("SELECT nome FROM categorias WHERE id = ? ORDER BY nome ASC", (request.form['categoria'],))
+        categoria_nome = cursor.fetchone()['nome']
 
-        # Inserção de movimentações fixas (12 meses)
+        cartao_id = int(request.form['cartao'])
+
         if fixa:
             for i in range(12):
-                data_parcela = data_obj + relativedelta(months=i)
-                data_pagamento_parcela = (data_pagamento_obj + relativedelta(months=i)).strftime('%Y-%m-%d') if data_pagamento_obj else None
                 cursor.execute('''
-                    INSERT INTO movimentacoes 
+                    INSERT INTO movimentacoes
                     (data, data_pagamento, descricao, categoria, cartao, valor, tipo, parcelas, parcela_numero, paga, usuario_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 0, ?)
                 ''', (
-                    data_parcela.strftime('%Y-%m-%d'),
-                    data_pagamento_parcela,
-                    descricao,
-                    categoria_nome,
-                    cartao_id,
-                    valor_total,
-                    tipo,
-                    1,
-                    1,
-                    usuario_id
+                    (data_obj + relativedelta(months=i)).strftime('%Y-%m-%d'),
+                    (data_pagamento_obj + relativedelta(months=i)).strftime('%Y-%m-%d') if data_pagamento_obj else None,
+                    descricao, categoria_nome, cartao_id, valor_total, tipo, usuario_id
                 ))
         else:
-            # Inserção parcelada
             valor_parcela = round(valor_total / parcelas, 2)
-            valor_total_parcelas = valor_parcela * parcelas
-            diferenca = round(valor_total - valor_total_parcelas, 2)
+            diferenca = round(valor_total - (valor_parcela * parcelas), 2)
 
             for i in range(parcelas):
-                data_parcela = data_obj + relativedelta(months=i)
-                data_pagamento_parcela = (data_pagamento_obj + relativedelta(months=i)).strftime('%Y-%m-%d') if data_pagamento_obj else None
-                valor_atual = valor_parcela
-                if i == parcelas - 1:
-                    valor_atual = round(valor_parcela + diferenca, 2)
-
                 cursor.execute('''
-                    INSERT INTO movimentacoes 
+                    INSERT INTO movimentacoes
                     (data, data_pagamento, descricao, categoria, cartao, valor, tipo, parcelas, parcela_numero, paga, usuario_id)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
                 ''', (
-                    data_parcela.strftime('%Y-%m-%d'),
-                    data_pagamento_parcela,
-                    descricao,
-                    categoria_nome,
-                    cartao_id,
-                    valor_atual,
-                    tipo,
-                    parcelas,
-                    i + 1,
-                    usuario_id
+                    (data_obj + relativedelta(months=i)).strftime('%Y-%m-%d'),
+                    (data_pagamento_obj + relativedelta(months=i)).strftime('%Y-%m-%d') if data_pagamento_obj else None,
+                    descricao, categoria_nome, cartao_id,
+                    valor_parcela + (diferenca if i == parcelas - 1 else 0),
+                    tipo, parcelas, i + 1, usuario_id
                 ))
 
         conn.commit()
         return redirect(url_for('index', mes=filtro_mes, pago=filtro_pago))
 
-    # Consulta das movimentações do usuário logado
+    # ==========================
+    # GET
+    # ==========================
     query = "SELECT * FROM movimentacoes WHERE usuario_id = ?"
     params = [usuario_id]
+
     if filtro_mes:
         query += " AND strftime('%Y-%m', data_pagamento) = ?"
         params.append(filtro_mes)
+
     if filtro_pago == 'sim':
         query += " AND paga = 1"
     elif filtro_pago == 'nao':
         query += " AND paga = 0"
-    query += " ORDER BY data_pagamento"
 
+    query += " ORDER BY data_pagamento"
     cursor.execute(query, params)
     movimentacoes = cursor.fetchall()
 
-    # Buscar categorias
-    cursor.execute('SELECT id, nome, descricao FROM categorias ORDER BY descricao')
+    cursor.execute("SELECT id, nome FROM categorias ORDER BY nome ASC")
     categorias = cursor.fetchall()
 
-    # Buscar cartões
-    cursor.execute('SELECT id, nome, bandeira FROM cartoes ORDER BY bandeira')
+    cursor.execute("SELECT id, nome, bandeira FROM cartoes ORDER BY bandeira ASC")
     cartoes = cursor.fetchall()
     cartoes_dict = {c['id']: {'nome': c['nome'], 'bandeira': c['bandeira']} for c in cartoes}
 
-    movimentacoes_formatadas = []
-    for m in movimentacoes:
-        try:
-            cartao_id = int(m['cartao']) if m['cartao'] is not None else None
-            cartao_info = cartoes_dict.get(cartao_id)
-        except (ValueError, KeyError, TypeError):
-            cartao_info = None
+    movimentacoes_formatadas = [{
+        'id': m['id'],
+        'data': m['data'],
+        'data_pagamento': m['data_pagamento'],
+        'descricao': m['descricao'],
+        'categoria': m['categoria'],
+        'cartao': cartoes_dict.get(m['cartao']),
+        'valor': m['valor'],
+        'tipo': m['tipo'],
+        'parcelas': m['parcelas'],
+        'parcela_numero': m['parcela_numero'],
+        'paga': bool(m['paga'])
+    } for m in movimentacoes]
 
-        movimentacoes_formatadas.append({
-            'id': m['id'],
-            'data': m['data'],
-            'data_pagamento': m['data_pagamento'],
-            'descricao': m['descricao'],
-            'categoria': m['categoria'],
-            'cartao': cartao_info,
-            'valor': m['valor'],
-            'tipo': m['tipo'],
-            'parcelas': m['parcelas'] if 'parcelas' in m.keys() else 1,
-            'parcela_numero': m['parcela_numero'] if 'parcela_numero' in m.keys() else 1,
-            'paga': bool(m['paga']) if 'paga' in m.keys() else False
-        })
-
-    # Totais
-    total = sum(m['valor'] if m['tipo'] == 'receita' else -m['valor'] for m in movimentacoes_formatadas)
     total_receitas = sum(m['valor'] for m in movimentacoes_formatadas if m['tipo'] == 'receita')
     total_despesas = sum(m['valor'] for m in movimentacoes_formatadas if m['tipo'] == 'despesa')
-
-    # Dados por mês
-    meses = []
-    dados_por_mes = defaultdict(lambda: {'receitas': 0, 'despesas': 0})
-    for m in movimentacoes_formatadas:
-        data = datetime.strptime(m['data'], '%Y-%m-%d')
-        mes_nome = data.strftime('%b')
-        if mes_nome not in meses:
-            meses.append(mes_nome)
-
-        if m['tipo'] == 'receita':
-            dados_por_mes[mes_nome]['receitas'] += m['valor']
-        else:
-            dados_por_mes[mes_nome]['despesas'] += m['valor']
-
-    receitas = [dados_por_mes[mes]['receitas'] for mes in meses]
-    despesas = [dados_por_mes[mes]['despesas'] for mes in meses]
-    filtro_ano = datetime.now().year
+    total = total_receitas - total_despesas
 
     conn.close()
 
@@ -313,12 +296,9 @@ def index():
         total=total,
         total_receitas=total_receitas,
         total_despesas=total_despesas,
-        meses=meses,
-        receitas=receitas,
-        despesas=despesas,
         filtro_mes=filtro_mes,
         filtro_pago=filtro_pago,
-        filtro_ano=filtro_ano,
+        meses_disponiveis=gerar_meses(2025),
         usuario=session['usuario']
     )
 
@@ -337,58 +317,35 @@ def resumo():
     cursor.execute("SELECT id FROM usuarios WHERE username = ?", (session['usuario'],))
     usuario_id = cursor.fetchone()['id']
 
-    filtro_mes = request.args.get('mes')
-    query = "SELECT * FROM movimentacoes WHERE usuario_id = ?"
-    params = [usuario_id]
-    if filtro_mes:
-        query += " AND strftime('%Y-%m', data) = ?"
-        params.append(filtro_mes)
-
-    cursor.execute(query, params)
+    cursor.execute("SELECT * FROM movimentacoes WHERE usuario_id = ?", (usuario_id,))
     movimentacoes = cursor.fetchall()
 
     categorias_totais = defaultdict(float)
-    cartoes_despesas = defaultdict(float)
-    cartoes_receitas = defaultdict(float)
-
-    cursor.execute('SELECT id, nome FROM cartoes ORDER BY nome')
-    cartoes_map = {row['id']: row['nome'] for row in cursor.fetchall()}
+    cartoes_totais = defaultdict(float)
 
     for m in movimentacoes:
-        valor = m['valor']
-        tipo = m['tipo']
-        cartao_id = m['cartao']
-        if tipo == 'despesa':
-            categorias_totais[m['categoria']] += valor
-            if cartao_id is not None:
-                cartoes_despesas[cartao_id] += valor
-        elif tipo == 'receita':
-            if cartao_id is not None:
-                cartoes_receitas[cartao_id] += valor
+        if m['tipo'] == 'despesa':
+            categorias_totais[m['categoria']] += m['valor']
+            if m['cartao']:
+                cartoes_totais[m['cartao']] += m['valor']
 
-    todos_cartoes_ids = sorted(set(list(cartoes_despesas.keys()) + list(cartoes_receitas.keys())))
-
-    labels_cartoes = [cartoes_map.get(cid, f"Cartão {cid}") for cid in todos_cartoes_ids]
-    valores_despesas = [cartoes_despesas.get(cid, 0) for cid in todos_cartoes_ids]
-    valores_receitas = [cartoes_receitas.get(cid, 0) for cid in todos_cartoes_ids]
-
-    labels_categorias = list(categorias_totais.keys())
-    valores_categorias = list(categorias_totais.values())
+    cursor.execute("SELECT id, nome FROM cartoes ORDER BY bandeira ASC")
+    cartoes_map = {c['id']: c['nome'] for c in cursor.fetchall()}
 
     conn.close()
 
-    return render_template('resumo.html',
-                           labels_cartoes=labels_cartoes,
-                           valores_despesas=valores_despesas,
-                           valores_receitas=valores_receitas,
-                           labels_categorias=labels_categorias,
-                           valores_categorias=valores_categorias,
-                           filtro_mes=filtro_mes,
-                           usuario=session['usuario'])
+    return render_template(
+        'resumo.html',
+        labels_categorias=list(categorias_totais.keys()),
+        valores_categorias=list(categorias_totais.values()),
+        labels_cartoes=[cartoes_map.get(cid) for cid in cartoes_totais],
+        valores_cartoes=list(cartoes_totais.values()),
+        usuario=session['usuario']
+    )
 
 
 # ==============================
 # RUN
 # ==============================
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(debug=True)

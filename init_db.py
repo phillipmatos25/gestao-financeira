@@ -1,12 +1,25 @@
 import sqlite3
+from werkzeug.security import generate_password_hash
 
-def deletar_movimentacao(id_para_deletar):
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM movimentacoes WHERE id = ?", (id_para_deletar,))
-    conn.commit()
-    conn.close()
-    print(f"Registro com id={id_para_deletar} deletado com sucesso.")
+# gera o hash da nova senha
+nova_senha = "123456"
+senha_hash = generate_password_hash(nova_senha)
 
-if __name__ == "__main__":
-    deletar_movimentacao(187)
+# conecta no banco
+conn = sqlite3.connect("database.db")
+cursor = conn.cursor()
+
+# atualiza a senha do usuário
+cursor.execute(
+    """
+    UPDATE usuarios
+    SET senha = ?
+    WHERE username = ?
+    """,
+    (senha_hash, "phillip")  # ajuste o username
+)
+
+conn.commit()
+conn.close()
+
+print("Senha atualizada com sucesso!")

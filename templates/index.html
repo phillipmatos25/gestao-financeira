@@ -25,13 +25,16 @@
             <label for="mes">Mês de Referência:</label>
             <select name="mes" id="mes">
                 <option value="" {% if not filtro_mes %}selected{% endif %}>Todos os Meses</option>
-                    {% for mes in ['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12'] %}
-                <option value="{{ mes }}" {% if filtro_mes == mes %}selected{% endif %}>
-                     {{ mes[5:] }}/{{ mes[:4] }}
-             </option>
-                    {% endfor %}
+
+                {% for mes in meses_disponiveis %}
+                    <option value="{{ mes }}" {% if filtro_mes == mes %}selected{% endif %}>
+                        {{ mes[5:] }}/{{ mes[:4] }}
+                    </option>
+                {% endfor %}
+
             </select>
         </div>
+
         <div>
             <label for="pago">Status Parcela:</label>
             <select name="pago" id="pago">
@@ -40,6 +43,7 @@
                 <option value="nao" {% if filtro_pago == 'nao' %}selected{% endif %}>Pendentes</option>
             </select>
         </div>
+
         <div>
             <button type="submit">Filtrar</button>
         </div>
@@ -66,7 +70,7 @@
 
         <div>
             <label for="data_pagamento">Vencimento:</label>
-            <input type="date" name="data_pagamento" id="data_pagamento"required>
+            <input type="date" name="data_pagamento" id="data_pagamento" required>
         </div>
 
         <div>
@@ -78,9 +82,9 @@
             <label for="categoria">Categoria:</label>
             <select name="categoria" required>
                 <option value="">Selecione...</option>
-                    {% for cat in categorias %}
-                <option value="{{ cat['id'] }}">{{ cat['nome'] }}</option>
-                    {% endfor %}
+                {% for cat in categorias %}
+                    <option value="{{ cat['id'] }}">{{ cat['nome'] }}</option>
+                {% endfor %}
             </select>
         </div>
 
@@ -96,20 +100,18 @@
             </select>
         </div>
 
-        <!-- Container que junta Parcelas e Fixo -->
+        <!-- Container Parcelas + Fixo -->
         <div style="display: flex; align-items: flex-start; gap: 1.5rem;">
 
-        <!-- Parcelas -->
-        <div style="display: flex; flex-direction: column;">
-            <label for="parcelas">Parcelas:</label>
-            <input type="number" name="parcelas" id="parcelas" min="1" placeholder="Parcelas" value="1" required>
-        </div>
+            <div style="display: flex; flex-direction: column;">
+                <label for="parcelas">Parcelas:</label>
+                <input type="number" name="parcelas" id="parcelas" min="1" placeholder="Parcelas" value="1" required>
+            </div>
 
-        <!-- Fixo (checkbox + label) -->
-        <div style="display: flex; align-items: center; margin-top: -88px; gap: 0.25rem;">
-            <label for="fixa" style="margin: 8; margin-right: -155px;">Fixo</label>
-            <input type="checkbox" id="fixa" name="fixa" value="1" style="margin-right: -155px;;">
-        </div>
+            <div style="display: flex; align-items: center; margin-top: -88px; gap: 0.25rem;">
+                <label for="fixa" style="margin: 8; margin-right: -155px;">Fixo</label>
+                <input type="checkbox" id="fixa" name="fixa" value="1" style="margin-right: -155px;">
+            </div>
 
         </div>
 
@@ -147,44 +149,46 @@
                 <th>Ações</th>
             </tr>
         </thead>
+
         <tbody>
             {% for m in movimentacoes %}
-                <tr>
-                    <td>{{ m.data }}</td>
-                    <td>{{ m.data_pagamento }}</td>
-                    <td>{{ m.descricao }}</td>
-                    <td>{{ m.categoria }}</td>
-                    <td>
-                        {% if m.cartao %}
-                            {{ m.cartao['bandeira'] }} / {{ m.cartao['nome'] }}
-                        {% else %}
-                            <em>Não vinculado</em>
-                        {% endif %}
-                    </td>
-                    <td>{{ m.parcela_numero }} / {{ m.parcelas }}</td>
-                    <td class="{{ 'positivo' if m.tipo == 'receita' else 'negativo' }}">
-                        {{ m.valor | format_currency }}
-                    </td>
-                    <td>{{ m.tipo.capitalize() }}</td>
-                    <td>
-                        <form method="post" action="{{ url_for('index') }}" style="display:inline;">
-                            <input type="hidden" name="movimentacao_id" value="{{ m.id }}">
-                            <input type="hidden" name="paga" value="{{ 0 if m.paga else 1 }}">
-                            <input type="hidden" name="alterar_status_parcela" value="1">
-                            <button type="submit" class="btn-status {{ 'paga' if m.paga else 'pendente' }}">
-                                {{ 'Pago' if m.paga else 'Pendente' }}
-                            </button>
-                        </form>
-                    </td>
-                    <td>
-                        <form method="post" style="display:inline;">
-                            <input type="hidden" name="movimentacao_id" value="{{ m.id }}">
-                            <button type="submit" name="excluir_movimentacao" class="btn-excluir">Excluir</button>
-                        </form>
-                    </td>
-                </tr>
+            <tr>
+                <td>{{ m.data }}</td>
+                <td>{{ m.data_pagamento }}</td>
+                <td>{{ m.descricao }}</td>
+                <td>{{ m.categoria }}</td>
+                <td>
+                    {% if m.cartao %}
+                        {{ m.cartao['bandeira'] }} / {{ m.cartao['nome'] }}
+                    {% else %}
+                        <em>Não vinculado</em>
+                    {% endif %}
+                </td>
+                <td>{{ m.parcela_numero }} / {{ m.parcelas }}</td>
+                <td class="{{ 'positivo' if m.tipo == 'receita' else 'negativo' }}">
+                    {{ m.valor | format_currency }}
+                </td>
+                <td>{{ m.tipo.capitalize() }}</td>
+                <td>
+                    <form method="post" action="{{ url_for('index') }}" style="display:inline;">
+                        <input type="hidden" name="movimentacao_id" value="{{ m.id }}">
+                        <input type="hidden" name="paga" value="{{ 0 if m.paga else 1 }}">
+                        <input type="hidden" name="alterar_status_parcela" value="1">
+                        <button type="submit" class="btn-status {{ 'paga' if m.paga else 'pendente' }}">
+                            {{ 'Pago' if m.paga else 'Pendente' }}
+                        </button>
+                    </form>
+                </td>
+                <td>
+                    <form method="post" style="display:inline;">
+                        <input type="hidden" name="movimentacao_id" value="{{ m.id }}">
+                        <button type="submit" name="excluir_movimentacao" class="btn-excluir">Excluir</button>
+                    </form>
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
+
         <tfoot>
             <tr>
                 <td colspan="6"><strong>Total:</strong></td>
@@ -196,5 +200,6 @@
             </tr>
         </tfoot>
     </table>
+
 </body>
-</html> 
+</html>
