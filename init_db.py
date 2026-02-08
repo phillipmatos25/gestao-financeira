@@ -1,25 +1,44 @@
-import sqlite3
-from werkzeug.security import generate_password_hash
+def init_db():
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
 
-# gera o hash da nova senha
-nova_senha = "123456"
-senha_hash = generate_password_hash(nova_senha)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
+    """)
 
-# conecta no banco
-conn = sqlite3.connect("database.db")
-cursor = conn.cursor()
+    # EXEMPLO — adapte às suas tabelas reais
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS categorias (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL
+        )
+    """)
 
-# atualiza a senha do usuário
-cursor.execute(
-    """
-    UPDATE usuarios
-    SET senha = ?
-    WHERE username = ?
-    """,
-    (senha_hash, "phillip")  # ajuste o username
-)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS cartoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            bandeira TEXT
+        )
+    """)
 
-conn.commit()
-conn.close()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS movimentacoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            data TEXT NOT NULL,
+            descricao TEXT,
+            categoria_id INTEGER,
+            cartao_id INTEGER,
+            valor REAL NOT NULL,
+            tipo TEXT NOT NULL,
+            FOREIGN KEY (categoria_id) REFERENCES categorias(id),
+            FOREIGN KEY (cartao_id) REFERENCES cartoes(id)
+        )
+    """)
 
-print("Senha atualizada com sucesso!")
+    conn.commit()
+    conn.close()

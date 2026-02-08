@@ -7,6 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask import redirect, url_for
 
 app = Flask(__name__)
+init_db()
 app.secret_key = "chave-secreta"
 
 @app.route("/")
