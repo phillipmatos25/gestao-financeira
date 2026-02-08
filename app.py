@@ -1,7 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 from collections import defaultdict
 from datetime import datetime, date
-import sqlite3
+import psycopg2
+import psycopg2.extras
+import os
 from dateutil.relativedelta import relativedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -11,10 +13,13 @@ app.secret_key = "chave-secreta"
 # ==============================
 # DATABASE
 # ==============================
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
 def get_db_connection():
-    conn = sqlite3.connect('database.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+    return psycopg2.connect(
+        DATABASE_URL,
+        cursor_factory=psycopg2.extras.RealDictCursor
+    )
 
 
 def init_db():
@@ -22,52 +27,61 @@ def init_db():
     cursor = conn.cursor()
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS usuarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        senha TEXT NOT NULL
-    )
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            senha TEXT NOT NULL
+        )
     """)
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS categorias (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT NOT NULL,
-        descricao TEXT
-    )
+        CREATE TABLE IF NOT EXISTS categorias (
+            id SERIAL PRIMARY KEY,
+            nome TEXT NOT NULL,
+            descricao TEXT
+        )
     """)
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS cartoes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT NOT NULL,
-        bandeira TEXT NOT NULL
-    )
+        CREATE TABLE IF NOT EXISTS cartoes (
+            id SERIAL PRIMARY KEY,
+            nome TEXT NOT NULL,
+            bandeira TEXT NOT NULL
+        )
     """)
 
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS movimentacoes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        data TEXT NOT NULL,
-        data_pagamento TEXT,
-        descricao TEXT,
-        categoria TEXT,
-        cartao INTEGER,
-        valor REAL NOT NULL,
-        tipo TEXT NOT NULL,
-        parcelas INTEGER,
-        parcela_numero INTEGER,
-        paga INTEGER DEFAULT 0,
-        usuario_id INTEGER,
-        FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
-    )
+        CREATE TABLE IF NOT EXISTS movimentacoes (
+            id SERIAL PRIMARY KEY,
+            data DATE NOT NULL,
+            data_pagamento DATE,
+            descricao TEXT,
+            categoria TEXT,
+            cartao INTEGER,
+            valor NUMERIC(10,2) NOT NULL,
+            tipo TEXT NOT NULL,
+            parcelas INTEGER,
+            parcela_numero INTEGER,
+            paga BOOLEAN DEFAULT FALSE,
+            usuario_id INTEGER REFERENCES usuarios(id)
+        )
     """)
+
+    # cria usuário admin padrão se não existir
+    cursor.execute("SELECT COUNT(*) FROM usuarios")
+    if cursor.fetchone()["count"] == 0:
+        cursor.execute(
+            "INSERT INTO usuarios (username, senha) VALUES (%s, %s)",
+            ("phillip_matos", generate_password_hash("741852963!@#"))
+        )
+        print(">>> Usuário admin criado (phillip_matos / 741852963!@#)")
 
     conn.commit()
+    cursor.close()
     conn.close()
 
 
-# ⚠️ IMPORTANTE: cria o banco ao subir o app
+# ⚠️ cria o banco ao subir o app
 init_db()
 
 # ==============================
@@ -102,7 +116,10 @@ def login():
 
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM usuarios WHERE username = ?", (username,))
+        cursor.execute(
+            "SELECT * FROM usuarios WHERE username = %s",
+            (username,)
+        )
         user = cursor.fetchone()
         conn.close()
 
@@ -143,35 +160,38 @@ def index():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id FROM usuarios WHERE username = ?", (session['usuario'],))
+    cursor.execute(
+        "SELECT id FROM usuarios WHERE username = %s",
+        (session['usuario'],)
+    )
     usuario = cursor.fetchone()
 
-    # 👉 Primeiro acesso: cria usuário automaticamente
+    # primeiro acesso: cria usuário automaticamente
     if not usuario:
         cursor.execute(
-            "INSERT INTO usuarios (username, senha) VALUES (?, ?)",
+            "INSERT INTO usuarios (username, senha) VALUES (%s, %s)",
             (session['usuario'], generate_password_hash("123"))
         )
         conn.commit()
-        cursor.execute("SELECT id FROM usuarios WHERE username = ?", (session['usuario'],))
+        cursor.execute(
+            "SELECT id FROM usuarios WHERE username = %s",
+            (session['usuario'],)
+        )
         usuario = cursor.fetchone()
 
     usuario_id = usuario['id']
 
-    # ==========================
-    # GET
-    # ==========================
-    query = "SELECT * FROM movimentacoes WHERE usuario_id = ?"
+    query = "SELECT * FROM movimentacoes WHERE usuario_id = %s"
     params = [usuario_id]
 
     if filtro_mes:
-        query += " AND strftime('%Y-%m', data_pagamento) = ?"
+        query += " AND TO_CHAR(data_pagamento, 'YYYY-MM') = %s"
         params.append(filtro_mes)
 
     if filtro_pago == 'sim':
-        query += " AND paga = 1"
+        query += " AND paga = TRUE"
     elif filtro_pago == 'nao':
-        query += " AND paga = 0"
+        query += " AND paga = FALSE"
 
     query += " ORDER BY data_pagamento"
     cursor.execute(query, params)
@@ -191,26 +211,15 @@ def index():
         'descricao': m['descricao'],
         'categoria': m['categoria'],
         'cartao': cartoes_dict.get(m['cartao']),
-        'valor': m['valor'],
+        'valor': float(m['valor']),
         'tipo': m['tipo'],
         'parcelas': m['parcelas'],
         'parcela_numero': m['parcela_numero'],
-        'paga': bool(m['paga'])
+        'paga': m['paga']
     } for m in movimentacoes]
 
     total_receitas = sum(m['valor'] for m in movimentacoes_formatadas if m['tipo'] == 'receita')
     total_despesas = sum(m['valor'] for m in movimentacoes_formatadas if m['tipo'] == 'despesa')
-
-     # cria usuário admin padrão se não existir
-    cursor.execute("SELECT COUNT(*) FROM usuarios")
-    total = cursor.fetchone()[0]
-
-    if total == 0:
-        cursor.execute(
-            "INSERT INTO usuarios (username, senha) VALUES (?, ?)",
-            ("phillip_matos", generate_password_hash("741852963!@#"))
-        )
-        print(">>> Usuário admin criado (phillip_matos / 741852963!@#)")
 
     conn.close()
 
