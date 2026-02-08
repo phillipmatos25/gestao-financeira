@@ -201,6 +201,17 @@ def index():
     total_receitas = sum(m['valor'] for m in movimentacoes_formatadas if m['tipo'] == 'receita')
     total_despesas = sum(m['valor'] for m in movimentacoes_formatadas if m['tipo'] == 'despesa')
 
+     # cria usuário admin padrão se não existir
+    cursor.execute("SELECT COUNT(*) FROM usuarios")
+    total = cursor.fetchone()[0]
+
+    if total == 0:
+        cursor.execute(
+            "INSERT INTO usuarios (username, senha) VALUES (?, ?)",
+            ("phillip_matos", generate_password_hash("741852963!@#"))
+        )
+        print(">>> Usuário admin criado (phillip_matos / 741852963!@#)")
+
     conn.close()
 
     return render_template(
