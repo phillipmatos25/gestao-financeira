@@ -11,6 +11,16 @@ app = Flask(__name__)
 app.secret_key = "chave-secreta"
 
 # ==============================
+# JINJA FILTERS
+# ==============================
+@app.template_filter('format_currency')
+def format_currency(value):
+    try:
+        return f"R$ {float(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except (ValueError, TypeError):
+        return "R$ 0,00"
+
+# ==============================
 # DATABASE
 # ==============================
 DATABASE_URL = os.environ.get("DATABASE_URL")
